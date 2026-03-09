@@ -1,0 +1,4 @@
+streamlit
+streamlit_cookies_controller
+PyJWT
+python-dotenv
