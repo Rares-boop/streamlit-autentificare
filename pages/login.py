@@ -1,10 +1,15 @@
 import streamlit as st
 from streamlit_cookies_controller import CookieController
-from auth.jwt_utils import generate_token
+from auth.jwt_utils import generate_token, check_token
 from db.database import login_user
 
 st.set_page_config(page_title="Login", layout="centered")
+
 controller = CookieController()
+token = controller.get("token")
+
+if token and check_token(token):
+    st.switch_page("home.py")
 
 st.title("🔐 Login")
 
