@@ -2,3 +2,6 @@ streamlit
 streamlit_cookies_controller
 PyJWT
 python-dotenv
+psycopg2-binary
+bcrypt
+Authlib

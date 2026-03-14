@@ -4,13 +4,14 @@ from streamlit_cookies_controller import CookieController
 from auth.jwt_utils import generate_token, check_token
 from db.database import email_check, is_email_valid, register_user
 
+st.set_page_config(page_title="Register", layout="centered")
+
 controller = CookieController()
 token = controller.get("token")
 
 if token and check_token(token):
     st.switch_page("home.py")
 
-st.set_page_config(page_title="Register", layout="centered")
 st.title("📝 Register")
 
 full_name = st.text_input("Full Name")

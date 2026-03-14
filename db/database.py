@@ -1,36 +1,46 @@
 import re
-import sqlite3
-import hashlib
+
+import bcrypt
+import psycopg2
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-DB_PATH = os.getenv("DB_PATH")
+
+USER = os.getenv("DB_USER")
+PASSWORD = os.getenv("DB_PASSWORD")
+HOST = os.getenv("DB_HOST")
+PORT = os.getenv("DB_PORT")
+DBNAME = os.getenv("DB_DATABASE")
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return psycopg2.connect(
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME
+    )
 
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS USERS (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             full_name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            salt TEXT NOT NULL,
+            password_hash TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     conn.commit()
     conn.close()
 
-def hash_password(password, salt=None):
-    if salt is None:
-        salt = os.urandom(32).hex()
-    password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
-    return password_hash, salt
+def hash_password(password):
+    if password is None:
+        return None
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 def is_email_valid(email):
     return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None
@@ -38,7 +48,7 @@ def is_email_valid(email):
 def email_check(email):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM USERS WHERE email = ?",(email,))
+    cursor.execute("SELECT id FROM USERS WHERE email = %s",(email,))
     result = cursor.fetchone()
     conn.close()
     return result is not None
@@ -47,11 +57,11 @@ def register_user(full_name, email, password):
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        password_hash, salt = hash_password(password)
+        password_hash = hash_password(password)
         cursor.execute(
-            "INSERT INTO USERS (full_name, email, password_hash, salt) VALUES (?, ?, ?, ?)"
+            "INSERT INTO USERS (full_name, email, password_hash) VALUES (%s, %s, %s)"
             " RETURNING id, full_name",
-            (full_name, email, password_hash, salt)
+            (full_name, email, password_hash)
         )
         result = cursor.fetchone()
         conn.commit()
@@ -63,12 +73,21 @@ def register_user(full_name, email, password):
 def login_user(email, password):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, full_name, password_hash, salt FROM USERS WHERE email = ?", (email,))
+    cursor.execute("SELECT id, full_name, password_hash FROM USERS WHERE email = %s", (email,))
     result = cursor.fetchone()
     conn.close()
-    if result:
-        password_hash, _ = hash_password(password, result[3])
-        if password_hash == result[2]:
+    if result and result[2]:
+        if bcrypt.checkpw(password.encode(), result[2].encode()):
             return result[0], result[1]
+
     return None
+
+def login_user_by_email(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, full_name FROM USERS WHERE email = %s",(email,))
+    result = cursor.fetchone()
+    conn.close()
+    return result
+
 
