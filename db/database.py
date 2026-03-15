@@ -90,4 +90,11 @@ def login_user_by_email(email):
     conn.close()
     return result
 
+def check_google_login(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT full_name, password_hash FROM USERS WHERE email = %s",(email,))
+    result = cursor.fetchone()
+    conn.close()
+    return result
 
