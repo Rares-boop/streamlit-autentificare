@@ -1,8 +1,12 @@
+import time
+
 import streamlit as st
 from streamlit_cookies_controller import CookieController
 
-from auth.jwt_utils import generate_token, check_token
+from auth.jwt_utils import check_token
 from db.database import email_check, is_email_valid, register_user
+
+from auth.email_utils import send_confirmation_email
 
 st.set_page_config(page_title="Register", layout="centered")
 
@@ -33,11 +37,10 @@ if st.button("Register"):
     else:
         result = register_user(full_name, email, password)
         if result is not None:
-            st.success(f"Account created successfully! Welcome, {result[1]}!")
-            token = generate_token(result[0], email)
-            controller.set("token", token)
-            st.success("Login successful")
-            st.switch_page("home.py")
+            send_confirmation_email(email, result[2])
+            st.success("Account created! Please check your email to confirm your account.")
+            time.sleep(5)
+            st.switch_page("pages/login.py")
         else:
             st.error("Something went wrong. Please try again.")
 

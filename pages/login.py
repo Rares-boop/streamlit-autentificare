@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_cookies_controller import CookieController
 from auth.jwt_utils import generate_token, check_token
-from db.database import login_user, email_check, register_user, login_user_by_email
+from db.database import login_user, email_check, register_user, login_user_by_email, register_user_google
 import time
 
 st.set_page_config(page_title="Login", layout="centered")
@@ -14,7 +14,7 @@ if token and check_token(token):
 
 if st.user.is_logged_in:
     if not email_check(st.user.email):
-        register_user(st.user.name, st.user.email, None)
+        register_user_google(st.user.name, st.user.email)
     user_id, _ = login_user_by_email(st.user.email)
     token = generate_token(user_id, st.user.email)
     controller.set("token", token)
@@ -36,12 +36,14 @@ if st.button("Login"):
     elif not email or not password:
         st.warning("Complete the login")
     else:
-        result = login_user(email, password)
+        result, status = login_user(email, password)
         if result:
             st.session_state.login_attempts = 0
-            token = generate_token(result[0], email)
+            token = generate_token(result, email)
             controller.set("token", token)
             st.switch_page("home.py")
+        elif status == "unconfirmed":
+            st.warning("Please confirm your email before logging in.")
         else:
             st.session_state.login_attempts += 1
             if st.session_state.login_attempts >= 5:
