@@ -1,9 +1,8 @@
-import re
-
 import bcrypt
 import psycopg2
 import os
 from dotenv import load_dotenv
+from email_validator import validate_email, EmailNotValidError
 
 load_dotenv()
 
@@ -43,7 +42,11 @@ def hash_password(password):
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 def is_email_valid(email):
-    return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None
+    try:
+        validate_email(email)
+        return True
+    except EmailNotValidError:
+        return False
 
 def email_check(email):
     conn = get_connection()
